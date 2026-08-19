@@ -1,60 +1,39 @@
-import { type HTMLAttributes, forwardRef } from 'react'
+import { forwardRef, type HTMLAttributes } from 'react'
 
 type FlexProps = HTMLAttributes<HTMLDivElement> & {
   direction?: 'row' | 'col'
-  align?: 'start' | 'center' | 'end' | 'stretch'
-  justify?: 'start' | 'center' | 'end' | 'between' | 'around'
+  align?: 'start' | 'center' | 'end' | 'baseline' | 'stretch'
+  justify?: 'start' | 'center' | 'end' | 'between'
   gap?: number
   wrap?: boolean
   grow?: boolean
+  as?: 'div' | 'ul' | 'li' | 'dl'
 }
 
-const alignMap: Record<string, string> = {
-  start: 'flex-start',
-  center: 'center',
-  end: 'flex-end',
-  stretch: 'stretch',
-}
+const alignMap = { start: 'flex-start', center: 'center', end: 'flex-end', baseline: 'baseline', stretch: 'stretch' }
+const justifyMap = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between' }
 
-const justifyMap: Record<string, string> = {
-  start: 'flex-start',
-  center: 'center',
-  end: 'flex-end',
-  between: 'space-between',
-  around: 'space-around',
-}
-
-export const Flex = forwardRef<HTMLDivElement, FlexProps>(
-  (
-    {
-      direction = 'row',
-      align = 'start',
-      justify = 'start',
-      gap,
-      wrap,
-      grow,
-      style,
-      ...rest
-    },
-    ref,
-  ) => {
-    return (
-      <div
-        ref={ref}
-        style={{
-          display: 'flex',
-          flexDirection: direction === 'col' ? 'column' : 'row',
-          alignItems: alignMap[align],
-          justifyContent: justifyMap[justify],
-          gap: gap !== undefined ? `${gap * 4}px` : undefined,
-          flexWrap: wrap ? 'wrap' : undefined,
-          flex: grow ? 1 : undefined,
-          ...style,
-        }}
-        {...rest}
-      />
-    )
-  },
-)
-
-Flex.displayName = 'Flex'
+export const Flex = forwardRef<HTMLDivElement, FlexProps>(function Flex(
+  { direction = 'row', align = 'stretch', justify = 'start', gap, wrap, grow, as = 'div', style, ...rest },
+  ref,
+) {
+  const Tag = as as 'div'
+  return (
+    <Tag
+      ref={ref}
+      style={{
+        display: 'flex',
+        flexDirection: direction === 'col' ? 'column' : 'row',
+        alignItems: alignMap[align],
+        justifyContent: justifyMap[justify],
+        gap,
+        flexWrap: wrap ? 'wrap' : undefined,
+        flex: grow ? 1 : undefined,
+        minWidth: 0,
+        ...(as === 'ul' || as === 'li' ? { listStyle: 'none', margin: 0, padding: 0 } : null),
+        ...style,
+      }}
+      {...rest}
+    />
+  )
+})
