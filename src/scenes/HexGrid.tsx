@@ -19,7 +19,7 @@ export function HexGrid({ animate = true }: { animate?: boolean }) {
       new THREE.MeshBasicMaterial({
         color: '#5db8a6',
         transparent: true,
-        opacity: 0.04,
+        opacity: 0.022,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         wireframe: true,

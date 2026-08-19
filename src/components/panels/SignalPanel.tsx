@@ -96,7 +96,7 @@ export function SignalPanel() {
         </Text>
       </Panel>
 
-      <Panel pad={18} style={{ flex: 1, minHeight: 0 }}>
+      <Panel pad={18}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 13 }}>
           <Text size="xs" label tone="accent">
             SHAP drivers

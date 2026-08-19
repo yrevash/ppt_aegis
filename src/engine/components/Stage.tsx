@@ -6,11 +6,10 @@ import { useEffect, useState, type ReactNode } from 'react'
  * Slides are authored at a fixed 1280x720 and the whole stage is scaled to fit
  * the viewport, the way reveal.js and Slidev do it.
  *
- * The previous engine let each slide reflow against the real viewport, which
- * meant a content-heavy slide could overflow at an unlucky projector
- * resolution and there was no way to catch it short of testing every size.
- * With a fixed stage, a slide that fits while authoring fits everywhere: the
- * only thing that changes across screens is the scale factor.
+ * Letting each slide reflow against the real viewport meant a content-heavy
+ * slide could overflow at an unlucky projector resolution with no way to catch
+ * it short of testing every size. With a fixed stage, a slide that fits while
+ * authoring fits everywhere; only the scale factor changes.
  */
 export const STAGE_WIDTH = 1280
 export const STAGE_HEIGHT = 720
@@ -20,11 +19,7 @@ export function Stage({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function fit() {
-      // 100dvh rather than innerHeight semantics: on mobile browsers the
-      // address bar would otherwise make the stage jump on first scroll.
-      const vw = window.innerWidth
-      const vh = window.innerHeight
-      setScale(Math.min(vw / STAGE_WIDTH, vh / STAGE_HEIGHT))
+      setScale(Math.min(window.innerWidth / STAGE_WIDTH, window.innerHeight / STAGE_HEIGHT))
     }
     fit()
     window.addEventListener('resize', fit)
@@ -40,20 +35,26 @@ export function Stage({ children }: { children: ReactNode }) {
       style={{
         position: 'fixed',
         inset: 0,
-        display: 'grid',
-        placeItems: 'center',
         zIndex: 'var(--z-stage)' as unknown as number,
         pointerEvents: 'none',
+        overflow: 'hidden',
       }}
     >
+      {/*
+        Centred by absolute positioning rather than by grid or flex alignment.
+        When the stage is wider than the viewport, the implicit grid column
+        sized itself to the 1280px child, so `place-items: center` had nothing
+        to centre against and the deck sat entirely off-screen on a phone.
+      */}
       <div
         style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
           width: STAGE_WIDTH,
           height: STAGE_HEIGHT,
-          transform: `scale(${scale})`,
+          transform: `translate(-50%, -50%) scale(${scale})`,
           transformOrigin: 'center center',
-          position: 'relative',
-          flexShrink: 0,
           pointerEvents: 'auto',
         }}
       >
