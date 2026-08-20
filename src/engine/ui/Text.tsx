@@ -1,57 +1,56 @@
-import { type HTMLAttributes, forwardRef } from 'react'
+import { forwardRef, type HTMLAttributes } from 'react'
 
-type TextProps = HTMLAttributes<HTMLParagraphElement> & {
-  size?: 'sm' | 'base' | 'lg'
-  color?: 'ink' | 'soft' | 'muted' | 'accent' | 'teal'
+type TextProps = HTMLAttributes<HTMLElement> & {
+  size?: 'xs' | 'sm' | 'base' | 'lg'
+  tone?: 'ink' | 'soft' | 'muted' | 'faint' | 'accent' | 'teal' | 'amber'
   weight?: 'normal' | 'medium' | 'semibold'
-  as?: 'p' | 'span'
+  as?: 'p' | 'span' | 'div' | 'dd' | 'dt' | 'li'
   mono?: boolean
-  uppercase?: boolean
-  tracking?: 'tight' | 'normal' | 'wide'
+  /** Small wide-tracked label. Used sparingly, never above every heading. */
+  label?: boolean
 }
 
-const sizeStyles: Record<string, React.CSSProperties> = {
-  sm: { fontSize: 'clamp(0.7rem, 1.2vw, 0.85rem)', lineHeight: 1.55 },
-  base: { fontSize: 'clamp(0.85rem, 1.5vw, 1.05rem)', lineHeight: 1.6 },
-  lg: { fontSize: 'clamp(1rem, 2vw, 1.3rem)', lineHeight: 1.55 },
+const sizes: Record<string, React.CSSProperties> = {
+  xs: { fontSize: 11.5, lineHeight: 1.5 },
+  sm: { fontSize: 13, lineHeight: 1.55 },
+  base: { fontSize: 15, lineHeight: 1.6 },
+  lg: { fontSize: 18, lineHeight: 1.55 },
 }
 
-const colorMap: Record<string, string> = {
-  ink: '#F0EDE8',
-  soft: '#A09B93',
-  muted: '#6B6760',
-  accent: '#CC785C',
-  teal: '#5DB8A6',
+export const TONE: Record<string, string> = {
+  ink: 'var(--ink)',
+  soft: 'var(--ink-soft)',
+  muted: 'var(--ink-muted)',
+  faint: 'var(--ink-faint)',
+  accent: 'var(--accent)',
+  teal: 'var(--teal)',
+  amber: 'var(--amber)',
 }
 
-const trackingMap: Record<string, string> = {
-  tight: '-0.01em',
-  normal: '0',
-  wide: '0.08em',
-}
+const weights = { normal: 400, medium: 500, semibold: 600 } as const
 
-export const Text = forwardRef<HTMLParagraphElement, TextProps>(
-  ({ size = 'base', color = 'soft', weight = 'normal', as = 'p', mono, uppercase, tracking = 'normal', style, ...rest }, ref) => {
-    const Tag = as
-    return (
-      <Tag
-        ref={ref}
-        style={{
-          margin: 0,
-          fontFamily: mono
-            ? 'var(--font-geist-mono), monospace'
-            : 'var(--font-geist-sans), system-ui, sans-serif',
-          fontWeight: weight === 'normal' ? 400 : weight === 'medium' ? 500 : 600,
-          color: colorMap[color],
-          textTransform: uppercase ? 'uppercase' : undefined,
-          letterSpacing: trackingMap[tracking],
-          ...sizeStyles[size],
-          ...style,
-        }}
-        {...rest}
-      />
-    )
-  },
-)
-
-Text.displayName = 'Text'
+export const Text = forwardRef<HTMLElement, TextProps>(function Text(
+  { size = 'base', tone = 'soft', weight = 'normal', as = 'p', mono, label, style, ...rest },
+  ref,
+) {
+  const Tag = as as 'p'
+  return (
+    <Tag
+      ref={ref as never}
+      style={{
+        margin: 0,
+        fontFamily: mono ? 'var(--font-geist-mono), monospace' : 'var(--font-geist-sans), system-ui, sans-serif',
+        fontWeight: weights[weight],
+        color: TONE[tone],
+        ...sizes[size],
+        ...(label
+          ? { fontSize: 10.5, letterSpacing: '0.15em', textTransform: 'uppercase', fontWeight: 500 }
+          : null),
+        // Avoids a single word stranded on the last line of a paragraph.
+        textWrap: 'pretty',
+        ...style,
+      }}
+      {...rest}
+    />
+  )
+})

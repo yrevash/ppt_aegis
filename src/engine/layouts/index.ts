@@ -1,6 +1,0 @@
-export { Cover } from './Cover'
-export { Content } from './Content'
-export { Split } from './Split'
-export { Grid } from './Grid'
-export { Quote } from './Quote'
-export { Blank } from './Blank'

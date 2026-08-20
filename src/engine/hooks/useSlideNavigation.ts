@@ -1,76 +1,137 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useSlide } from '../context/SlideContext'
+import { useSlideStore } from '../store/slide-store'
 
+const SWIPE_THRESHOLD = 48
+const WHEEL_THRESHOLD = 42
+const WHEEL_COOLDOWN = 420
+
+/**
+ * Keyboard, wheel and touch navigation for the deck.
+ *
+ * Keys follow the conventions presenters already have in their fingers from
+ * reveal.js and Keynote, including the forward/back buttons most USB clickers
+ * emit (PageDown / PageUp).
+ */
 export function useSlideNavigation() {
-  const { next, prev, current } = useSlide()
-
   useEffect(() => {
-    function handleKeydown(e: KeyboardEvent) {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
-        e.preventDefault()
-        next()
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        e.preventDefault()
-        prev()
+    function onKeyDown(e: KeyboardEvent) {
+      // Never steal keys from a focused control.
+      const target = e.target as HTMLElement | null
+      if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) {
+        return
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+
+      const store = useSlideStore.getState()
+
+      switch (e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+        case 'PageDown':
+        case ' ':
+          e.preventDefault()
+          store.next()
+          break
+        case 'ArrowLeft':
+        case 'ArrowUp':
+        case 'PageUp':
+        case 'Backspace':
+          e.preventDefault()
+          store.prev()
+          break
+        case 'Home':
+          e.preventDefault()
+          store.goTo(0)
+          break
+        case 'End':
+          e.preventDefault()
+          store.goTo(store.slides.length - 1)
+          break
+        case 'o':
+        case 'O':
+          e.preventDefault()
+          store.toggleOverview()
+          break
+        case '?':
+          e.preventDefault()
+          store.toggleHelp()
+          break
+        case 'Escape':
+          if (store.overviewOpen || store.helpOpen) {
+            e.preventDefault()
+            store.closeOverlays()
+          }
+          break
+        case 'f':
+        case 'F': {
+          e.preventDefault()
+          if (document.fullscreenElement) void document.exitFullscreen()
+          else void document.documentElement.requestFullscreen().catch(() => {})
+          break
+        }
+        default:
+          break
       }
     }
 
-    let touchStartX = 0
-    let touchStartY = 0
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [])
 
-    function handleTouchStart(e: TouchEvent) {
-      touchStartX = e.touches[0].clientX
-      touchStartY = e.touches[0].clientY
-    }
-
-    function handleTouchEnd(e: TouchEvent) {
-      const dx = e.changedTouches[0].clientX - touchStartX
-      const dy = e.changedTouches[0].clientY - touchStartY
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 50) prev()
-        else if (dx < -50) next()
-      } else {
-        if (dy > 50) prev()
-        else if (dy < -50) next()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeydown)
-    window.addEventListener('touchstart', handleTouchStart, { passive: true })
-    window.addEventListener('touchend', handleTouchEnd)
-
-    return () => {
-      window.removeEventListener('keydown', handleKeydown)
-      window.removeEventListener('touchstart', handleTouchStart)
-      window.removeEventListener('touchend', handleTouchEnd)
-    }
-  }, [next, prev])
-
+  // Wheel and trackpad. Listener is passive: the body never scrolls, so there
+  // is nothing to preventDefault and the browser can stay off the main thread.
   useEffect(() => {
-    let accumulating = false
-    let deltaAccum = 0
-    let timer: ReturnType<typeof setTimeout>
+    let last = 0
+    function onWheel(e: WheelEvent) {
+      const store = useSlideStore.getState()
+      if (store.overviewOpen || store.helpOpen) return
 
-    function handleWheel(e: WheelEvent) {
-      e.preventDefault()
-      deltaAccum += Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX
-      if (!accumulating) {
-        accumulating = true
-        timer = setTimeout(() => {
-          if (deltaAccum > 40) next()
-          else if (deltaAccum < -40) prev()
-          deltaAccum = 0
-          accumulating = false
-        }, 100)
-      }
+      const now = Date.now()
+      if (now - last < WHEEL_COOLDOWN) return
+
+      const delta = Math.abs(e.deltaY) > Math.abs(e.deltaX) ? e.deltaY : e.deltaX
+      if (Math.abs(delta) < WHEEL_THRESHOLD) return
+
+      last = now
+      if (delta > 0) store.next()
+      else store.prev()
     }
 
-    window.addEventListener('wheel', handleWheel, { passive: false })
+    window.addEventListener('wheel', onWheel, { passive: true })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [])
+
+  // Touch swipe.
+  useEffect(() => {
+    let startX = 0
+    let startY = 0
+
+    function onTouchStart(e: TouchEvent) {
+      startX = e.touches[0].clientX
+      startY = e.touches[0].clientY
+    }
+
+    function onTouchEnd(e: TouchEvent) {
+      const store = useSlideStore.getState()
+      if (store.overviewOpen || store.helpOpen) return
+
+      const dx = e.changedTouches[0].clientX - startX
+      const dy = e.changedTouches[0].clientY - startY
+      const horizontal = Math.abs(dx) > Math.abs(dy)
+      const travel = horizontal ? dx : dy
+      if (Math.abs(travel) < SWIPE_THRESHOLD) return
+
+      if (travel < 0) store.next()
+      else store.prev()
+    }
+
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchend', onTouchEnd, { passive: true })
     return () => {
-      window.removeEventListener('wheel', handleWheel)
-      clearTimeout(timer)
+      window.removeEventListener('touchstart', onTouchStart)
+      window.removeEventListener('touchend', onTouchEnd)
     }
-  }, [next, prev, current])
+  }, [])
 }
